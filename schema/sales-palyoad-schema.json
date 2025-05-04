@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "売上ペイロードスキーマ",
+  "description": "sales テーブル内の payload フィールドに格納されている JSON データの構造定義。",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "integer",
+      "description": "注文ID。sales テーブルのトップレベルの order_id と一致する。"
+    },
+    "customer_id": {
+      "type": ["integer", "null"],
+      "description": "購入した顧客の ID。5% 程度は NULL にすることで不一致のシナリオもテスト可能。"
+    },
+    "product_id": {
+      "type": ["integer", "null"],
+      "description": "購入された商品の ID。NULL の場合、商品マスタと JOIN できない想定。"
+    },
+    "date_time": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "売上が発生した日時（ISO 8601 形式）。パーティションや時系列分析に利用。"
+    },
+    "quantity": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "購入数量。0 は許容せず、NULL の場合は不明または欠損データ。"
+    },
+    "revenue": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "この売上で発生した収益（単価×数量）。NULL の場合は未確定や非課金取引。"
+    },
+    "is_proper": {
+      "type": ["boolean", "null"],
+      "description": "取引が正当かどうかを示すフラグ。精度検証などで使用可能。"
+    },
+    "log_source": {
+      "type": ["string", "null"],
+      "enum": ["online", "in_store", null],
+      "description": "データの発生元。オンライン注文か実店舗か。NULL の場合は情報不足。"
+    }
+  },
+  "required": ["order_id"]
+}

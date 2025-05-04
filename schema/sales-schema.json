@@ -1,0 +1,22 @@
+[
+  {
+    "name": "order_id",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "date_time",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "log_source",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "payload",
+    "type": "JSON",
+    "mode": "REQUIRED"
+  }
+]
