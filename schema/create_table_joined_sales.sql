@@ -17,11 +17,11 @@ CREATE OR REPLACE TABLE sales01.joined_sales AS (
     p.cost
   FROM
     sales01.sales AS s
-  LEFT JOIN
+  INNER JOIN
     sales01.customers AS c
   ON
     CAST(JSON_EXTRACT_SCALAR(s.payload, '$.customer_id') AS INT64) = c.customer_id
-  LEFT JOIN
+  INNER JOIN
     sales01.products AS p
   ON
     CAST(JSON_EXTRACT_SCALAR(s.payload, '$.product_id') AS INT64) = p.product_id

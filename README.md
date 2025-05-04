@@ -82,7 +82,7 @@ bq version
 
 まず、テストデータを登録します。以下のコマンドを実行してください。
 
-```
+```bash
 ./scripts/setup_test_datasets.sh bigquery-study-458607
 ```
 
@@ -118,11 +118,29 @@ salesテーブルには、customer_idおよびproduct_idを外部キーとする
 
 この仕組みにより、クエリやデータ生成スクリプトの変更が既存データに影響していないかを自動で検証できます。
 
+## リトマステスト
+
+一連のタスクを実行した後に、結果として生成されたテーブルに対してルールベースの妥当性検証をしておくと、データやSQLの不備を早期に発見することができます。scripts/litomus_test.shは、SQLのSELECT文を各行に書いたファイルを読み込んで、その結果が1行以上か0行かの判定をします。
+
+結果が1行以上であることを期待するのをポジティブテストと言い、それは以下のように実行します。
+
+```bash
+./scripts/litmus_test.sh bigquery-study-458607 test/litmus-joined_sales-positive.sql
+```
+
+結果が0行であることを期待するのをネガティブテストと言い、それは以下のように実行します。
+
+```bash
+./scripts/litmus_test.sh --negative bigquery-study-458607 test/litmus-joined_sales-negative.sql
+```
+
+ポジティブテストには、分析結果に当然含まれると期待する条件を書いていきます。ネガティブテストには、各列にNULLなどの不正なデータが入っていないかを調べるのに便利です。各種のコーナーケースをついてポジティブテストやネガティブテストを追加していくと、システムをより堅牢にすることができます。
+
 ## スケジュール付きクエリの登録
 
 現有データの最後の7日間に絞って、かつJOINされたsalesテーブルを作成するタスクを自動実行するとしましょう。スケジュール付きのスクリプトを登録するには、以下のコマンドを実行する。まずは、テストのために、2分後に実行させてみましょう。
 
-```
+```bash
 ./scripts/register_scheduled_query.sh bigquery-study-458607 \
   create_table_latest_week_joined_sales \
   schema/create_table_latest_week_joined_sales.sql \
@@ -133,7 +151,7 @@ GCPコンソールで、スケジュールされたクエリとしてcreate_tabl
 
 登録されているスケジュールクエリを消すには、以下のようにします。実行した後、GCPコンソールで、該当のスケジュール付きクエリが消えていることを確認してください。反映に1分くらい遅延があることがあるので、何度かリロードしてみてください。
 
-```
+```bash
 ./scripts/register_scheduled_query.sh bigquery-study-458607 \
   create_table_latest_week_joined_sales \
   --delete
@@ -141,7 +159,7 @@ GCPコンソールで、スケジュールされたクエリとしてcreate_tabl
 
 本番用に登録するには、以下のようにします。実行後、JSTの14:00に実行されるようになっていることを確認してください。
 
-```
+```bash
 ./scripts/register_scheduled_query.sh bigquery-study-458607 \
   create_table_latest_week_joined_sales \
   schema/create_table_latest_week_joined_sales.sql \
@@ -151,7 +169,7 @@ GCPコンソールで、スケジュールされたクエリとしてcreate_tabl
 
 salesテーブルには、取引情報がJSON形式のペイロードとして格納されています。パーティショニングと絞り込みのための属性も抽出してあります。
 
-```
+```sql
 CREATE OR REPLACE TABLE sales01.sales (
   order_id INT64 NOT NULL,
   date_time TIMESTAMP NOT NULL,
@@ -164,7 +182,7 @@ CLUSTER BY order_id;
 
 ペイロードがJSON形式であることで、データ形式の変更に強くなります。一方で、データ形式がSQLスキーマ上で明示されないので、中に何が入っているのか目視で確認するのが大変です。そこで、JSONスキーマを用います。schema/sales-palyoad-schema.jsonに以下のように書いてあります。
 
-```
+```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "売上ペイロードスキーマ",
@@ -214,7 +232,7 @@ CLUSTER BY order_id;
 
 test/data-sales.ndjsonがテスト用として投入されるデータですが、それがJSONスキーマに適合しているかどうかは、以下のコマンドで確認できます。
 
-```
+```bash
 ./scripts/validate_sales_payload.py
 ```
 
@@ -222,19 +240,19 @@ test/data-sales.ndjsonがテスト用として投入されるデータですが�
 
 分析クエリは、analyses/ ディレクトリの中にSQLのファイルを置いて、以下のように実行します。単にjoined_salesテーブルの内容を見るなら以下のスクリプトを実行します。
 
-```
+```bash
 ./scripts/run_analysis.sh bigquery-study-458607 analyses/view_joined_sales.sql
 ```
 
 関東の女性の間で最も売上高が多い商品を表示するには、以下のようにします。
 
-```
+```bash
 ./scripts/run_analysis.sh bigquery-study-458607 analyses/view_joined_sales.sql
 ```
 
 run_analysis.shに複数のSQLファイルを指定した場合、それをcatで結合してから1セッションとして実行します。よって、よく使う一時テーブルを作るようなSQL文を独立させておいて、以下のように実行することもできます。
 
-```
+```bash
 ./scripts/run_analysis.sh bigquery-study-458607 analyses/make_temp_table.sql analyze_xxx.sql
 ```
 
@@ -242,7 +260,7 @@ run_analysis.shに複数のSQLファイルを指定した場合、それをcat�
 
 ChatGPTの最近のバージョン（4o以降）は、BigQuery上のデータの分析を行うための実用的なSQL文を生成する能力がある。ChatGPTをうまく動作させるためには、スキーマなどのコンテキスト情報を適切に渡す必要がある。そのコンテキスト情報を自動的に集めるスクリプトを用意してある。以下を実行する。
 
-```
+```bash
 ./scripts/generate_chatgpt_context.sh
 ```
 
@@ -284,3 +302,27 @@ JOINに失敗したレコードや、NULL値により売上が計算できない
 - ChatGPTを使った分析クエリ生成に関しては、scripts/generate_chatgpt_context.sh
 
 GCP上で実験的にクエリを書いて実行しても良いですが、実運用に組み込むものは必ずローカルに保存して実行を確認し、そのファイルをGitで管理してください。GCPとローカルで二重管理になると混乱するので、必ずローカルでGit管理されたSQLファイルを正としましょう。
+
+### CI/CDのその他の方法
+
+本リポジトリでは、scripts/register_scheduled_query.sh を用いたシェルベースの登録スクリプトにより、BigQueryのスケジュール付きクエリを自動デプロイしています。これは軽量で柔軟性が高く、個人開発や小規模プロジェクトに適しています。
+
+一方で、組織開発やチーム連携を見据える場合、より構造化された手段を用いることで運用性・保守性が向上します。以下に代表的なCI/CD構成の選択肢をまとめます。
+
+- 1. Terraform による構成管理（Infrastructure as Code）
+  - GCPのスケジュール付きクエリ（BigQuery Data Transfer Config）をterraform applyにより一元管理。
+  - Gitで管理された明示的な宣言（HCL）ができ、他のインフラと統一したワークフローが実現できる
+  - 初期セットアップに学習コストがかかり、小回りの効く動的スケジューリングには不向き
+  - 参考: google_bigquery_data_transfer_config – Terraform Registry
+- 2. dbt によるモデル構成とスケジューリング（データ変換中心）
+  - SQL変換処理を models/ に定義し、定期的にdbtrunを実行。
+  - クエリの依存関係、テスト、文書化が一体化
+  - スケジュール付きクエリそのもののデプロイ管理ではなく、個別の運用環境が必要
+- 3. Cloud Scheduler + Cloud Functions による動的登録
+  - スケジューラがCloud Functionを起動し、BigQuery Transfer ConfigをREST APIで作成・更新。
+  - 動的なクエリ生成や条件付き登録が可能で、GCP上で完結する構成
+  - Cloud Functionsの保守や認証管理が必要
+- 4. 自作シェルスクリプト + REST API（本リポジトリ方式）
+  - curl によるREST API呼び出しと bq CLI を組み合わせて登録。
+  - 軽量で高速。環境に依存せず動作。GitHub Actionsなどへの組込みも容易
+  - エラーハンドリング・構成管理に個別にスクリプトを書く必要あり。
