@@ -41,16 +41,7 @@
 - Python 3.9以降
 - Homebrew が導入済み
 
-### 1. Python仮想環境の作成と依存モジュールのインストール
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip3 install --upgrade pip
-pip3 install jsonschema
-```
-
-### 2. Google Cloud SDKのインストールと初期化
+### 1. Google Cloud SDKのインストールと初期化
 
 ```bash
 brew install --cask google-cloud-sdk
@@ -66,13 +57,19 @@ gcloud config set project [YOUR_PROJECT_ID]
 
 ※ `[YOUR_PROJECT_ID]` は自身のGCPプロジェクトIDに置き換えてください。
 
-### 3. BigQuery CLI（bq）の動作確認
+### 2. BigQuery CLI（bq）の動作確認
 
 ```bash
 bq version
 ```
 
 正常にバージョン情報が表示されれば完了です。
+
+### 3. Pythonの依存モジュールのインストール
+
+```bash
+pip3 install jsonschema
+```
 
 ---
 
