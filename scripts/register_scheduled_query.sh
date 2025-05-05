@@ -81,7 +81,7 @@ if [[ -n "$RUN_SOON" ]]; then
   SCHEDULE="every day ${FUTURE_TIME}"
 fi
 
-# 1回目（ダミー）用 payload
+# Create dummy config
 PAYLOAD=$(mktemp)
 TEMP_FILES+=("$PAYLOAD")
 
@@ -120,26 +120,36 @@ if [[ "$TRANSFER_CONFIG_ID" == "null" || -z "$TRANSFER_CONFIG_ID" ]]; then
 fi
 
 echo "Transfer config created: ${TRANSFER_CONFIG_ID}"
-echo "Reading and escaping SQL files..."
-
+echo "Reading SQL files..."
 COMBINED_SQL=$(cat "${SQL_FILES[@]}")
-COMBINED_SQL="${COMBINED_SQL}; SELECT 'done at ' || FORMAT_TIMESTAMP('%F %T', CURRENT_TIMESTAMP(), 'Asia/Tokyo') AS status;"
-ESCAPED_SQL=$(echo "$COMBINED_SQL" | sed 's/"/\\"/g' | tr -d '\n')
 
-echo "Updating query and schedule using bq CLI..."
+PARAMS_FILE=$(mktemp)
+TEMP_FILES+=("$PARAMS_FILE")
 
-# 実クエリにDDL/DMLが含まれるかチェック
+# DDL/DML detection
 if echo "$COMBINED_SQL" | grep -Ei '^\s*(CREATE|INSERT|UPDATE|DELETE|MERGE)' >/dev/null; then
-  PARAMS="{\"query\":\"$ESCAPED_SQL\"}"
+  jq -n --arg query "$COMBINED_SQL" \
+    '{query: $query}' > "$PARAMS_FILE"
 else
-  PARAMS="{\"query\":\"$ESCAPED_SQL\",\"write_disposition\":\"WRITE_TRUNCATE\",\"destination_table_name_template\":\"_result_${DISPLAY_NAME}\",\"partitioning_field\":\"\"}"
+  jq -n \
+    --arg query "$COMBINED_SQL" \
+    --arg template "_result_${DISPLAY_NAME}" \
+    --arg disposition "WRITE_TRUNCATE" \
+    --arg partition "" \
+    '{
+      query: $query,
+      write_disposition: $disposition,
+      destination_table_name_template: $template,
+      partitioning_field: $partition
+    }' > "$PARAMS_FILE"
 fi
 
+echo "Updating query and schedule using bq CLI..."
 bq update \
   --transfer_config \
   --project_id="$PROJECT_ID" \
   --location="$LOCATION" \
-  --params="$PARAMS" \
+  --params="$(cat "$PARAMS_FILE")" \
   --schedule="$SCHEDULE" \
   "$TRANSFER_CONFIG_ID"
 

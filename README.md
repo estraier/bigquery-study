@@ -39,6 +39,7 @@
 
 - Python 3.9以降
 - Homebrew
+- Git
 
 ### 1. Google Cloud SDKのインストールと初期化
 
@@ -69,6 +70,14 @@ bq version
 ```bash
 pip3 install jsonschema
 ```
+
+### 4. 本プロジェクトのリポジトリをダウンロード
+
+```bash
+git clone https://github.com/estraier/bigquery-study.git
+```
+
+カレントディレクトリにbigquery-studyというディレクトリが作られます。以後の作業はその中で行います。
 
 ---
 
@@ -112,17 +121,35 @@ pip3 install jsonschema
 
 customers, products, salesというテーブルが作られ、そこにテスト用のデータが投入されます。各テーブルのスキーマについては、schema/create_table_customers.sqlなどに記述してあります。
 
-salesテーブルには、customer_idおよびproduct_idを外部キーとするcustomersテーブルおよびsalesテーブルへの参照が含まれます。それをLEFT JOINで解決したjoined_salesというテーブルも自動生成されます。
+salesテーブルには、customer_idおよびproduct_idを外部キーとするcustomersテーブルおよびsalesテーブルへの参照が含まれます。それをLEFT JOINで解決したjoined_salesというテーブルも自動生成されます。普通、このような結合テーブルは分析クエリを実行する際に必要なプロパティのみを抽出して動的に作るものですが、ここではデモ用途で予め作っています。
 
 各テーブルが正常に作成されているかどうか、GCPのコンソールで確認してください。
+
+## 任意の分析クエリの実行
+
+分析クエリは、analyses/ ディレクトリの中にSQLのファイルを置いて、以下のように実行します。単にjoined_salesテーブルの内容を見るなら以下のスクリプトを実行します。
+
+```bash
+./scripts/run_analysis.sh bigquery-study-458607 analyses/view_joined_sales.sql
+```
+
+関東の女性の間で最も売上高が多い商品を表示するには、以下のようにします。
+
+```bash
+./scripts/run_analysis.sh bigquery-study-458607 analyses/view_joined_sales.sql
+```
+
+run_analysis.shに複数のSQLファイルを指定した場合、それをcatで結合してから1セッションとして実行します。よって、よく使う一時テーブルを作るようなSQL文を独立させておいて、以下のように実行することもできます。
+
+```bash
+./scripts/run_analysis.sh bigquery-study-458607 analyses/make_temp_table.sql analyze_xxx.sql
+```
 
 ## リグレッションテスト
 
 本プロジェクトには、BigQuery 上のテーブルとローカルに保存された「期待値（expected）」CSVを比較するためのリグレッションテスト機構が含まれています。
 
-### 1. 初回の期待値ダンプ
-
-テストの基準となる「期待値CSV」は以下のコマンドで生成します：
+テストの基準となる「期待値CSV」は以下のコマンドで生成します。
 
 ```bash
 ./scripts/regression_test.sh bigquery-study-458607 --dump
@@ -130,17 +157,15 @@ salesテーブルには、customer_idおよびproduct_idを外部キーとする
 
 `test/expected/` ディレクトリに、BigQuery 上のデータをダンプしたCSVファイルが保存されます。テーブルごとに `ORDER BY` が安定するカラムを指定しているため、差分があっても比較可能です。
 
-### 2. 差分チェック
-
-期待値との差分がないかをチェックするには、以下のコマンドを実行します：
+期待値との差分がないかをチェックするには、以下のコマンドを実行します。
 
 ```bash
 ./scripts/regression_test.sh bigquery-study-458607
 ```
 
-差分がある場合は、test/diff/ にテーブルごとの*.diffファイルが生成されます。標準出力にも OK/Errorの判定が表示され、差分の有無に応じてプロセスの終了コード（`$?`）も `0` または `1` を返します。
+差分がある場合は、test/diff/ にテーブルごとの*.diffファイルが生成されます。標準出力にも OK/Errorの判定が表示されます。
 
-この仕組みにより、クエリやデータ生成スクリプトの変更が既存データに影響していないかを自動で検証できます。
+この仕組みにより、クエリやデータ生成スクリプトの変更が既存データに影響していないかを自動で検証できます。実運用で継続的に維持すべきデータベースがある場合、開発計画の中でそれらのデータベースが変更されるかどうかに関わらず、念の為にリグレッションテストを通しておいた方が良いでしょう。本番環境でのデプロイ作業の前後でもリグレッションテストを行うと安心です。
 
 ## リトマステスト
 
@@ -203,7 +228,37 @@ order_id,product_name,customer_name,revenue
 
 ## スケジュール付きクエリの登録
 
-現有データの最後の7日間に絞って、かつJOINされたsalesテーブルを作成するタスクを自動実行するとしましょう。スケジュール付きのスクリプトを登録するには、以下のコマンドを実行する。まずは、テストのために、2分後に実行させてみましょう。
+joined_salesの中身を見るためのview_joined_salesをスケジュール付きクエリとして登録して実行してみましょう。
+
+```bash
+./scripts/register_scheduled_query.sh bigquery-study-458607 \
+  view_joined_sales \
+  analyses/view_joined_sales.sql \
+  --run-soon
+```
+
+GCPコンソールで、スケジュールされたクエリとしてview_joined_salesが登録されていることを確認します。反映に1分くらい遅延があることがあるので、何度かリロードしてみてください。
+
+BigQueryの仕様上、スケジュール付きクエリとしてAPI経由で登録したクエリは、即座に実行された上で、以後定期的に実行されることになります。それを回避すべく、このスクリプトでは、何もしないダミーのクエリをまずは登録して即時1回目の実行をさせた上で、内容を上書きしています。--run-soonを付けている場合、現在から2分後に2回目の実行がスケジュールされます。以後毎日同時刻に定期実行されることになります。
+
+2分後にGCPコンソールのテーブル一覧を確認すると、_result_view_joined_salesというテーブルが作られているはずです。そこにクエリの結果が書き込まれています。
+
+登録されているスケジュールクエリを消すには、以下のようにします。実行した後、GCPコンソールで、該当のスケジュール付きクエリが消えていることを確認してください。こちらも反映に時間がかかることがあります。
+
+```bash
+./scripts/register_scheduled_query.sh bigquery-study-458607 \
+  view_joined_sales --delete
+```
+
+本番用に登録するには、--run-soonを外して登録します。実行後、JSTの14:00に実行されるようになっていることを確認してください。実行時間はスクリプトの中にハードコードされています。
+
+```bash
+./scripts/register_scheduled_query.sh bigquery-study-458607 \
+  view_joined_sales \
+  analyses/view_joined_sales.sql
+```
+
+スケジュール付きクエリではDDLも発行できます。現有データの最後の7日間に絞って、かつJOINされたsalesテーブルを作成するタスクを自動実行するとしましょう。スケジュール付きのスクリプトを登録するには、実行すべきSQLファイルを準備した上で、以下のコマンドを実行します。まずは、テストのために、2分後に実行させてみましょう。
 
 ```bash
 ./scripts/register_scheduled_query.sh bigquery-study-458607 \
@@ -212,23 +267,9 @@ order_id,product_name,customer_name,revenue
   --run-soon
 ```
 
-GCPコンソールで、スケジュールされたクエリとしてcreate_table_latest_week_joined_salesが登録されていることを確認します。反映に1分くらい遅延があることがあるので、何度かリロードしてみてください。--run-soonを付けている場合、現在から2分後に実行され、以後毎日同時刻に定期実行されることになります。
+GCPコンソールで、スケジュールされたクエリとしてcreate_table_latest_week_joined_salesが登録されていることを確認します。反映に1分くらい遅延があることがあるので、何度かリロードしてみてください。
 
-登録されているスケジュールクエリを消すには、以下のようにします。実行した後、GCPコンソールで、該当のスケジュール付きクエリが消えていることを確認してください。反映に1分くらい遅延があることがあるので、何度かリロードしてみてください。
-
-```bash
-./scripts/register_scheduled_query.sh bigquery-study-458607 \
-  create_table_latest_week_joined_sales \
-  --delete
-```
-
-本番用に登録するには、以下のようにします。実行後、JSTの14:00に実行されるようになっていることを確認してください。
-
-```bash
-./scripts/register_scheduled_query.sh bigquery-study-458607 \
-  create_table_latest_week_joined_sales \
-  schema/create_table_latest_week_joined_sales.sql \
-```
+2分後にクエリが実行されると、latest_week_joined_salesというテーブルが生成されているはずです。また、_result_create_table_latest_week_joined_salesも生成されますが、それには特に何も格納されません。
 
 ## JSONのペイロードとJSONスキーマ
 
@@ -301,26 +342,6 @@ test/data-sales.ndjsonがテスト用として投入されるデータですが�
 ./scripts/validate_sales_payload.py
 ```
 
-## 任意の分析クエリの実行
-
-分析クエリは、analyses/ ディレクトリの中にSQLのファイルを置いて、以下のように実行します。単にjoined_salesテーブルの内容を見るなら以下のスクリプトを実行します。
-
-```bash
-./scripts/run_analysis.sh bigquery-study-458607 analyses/view_joined_sales.sql
-```
-
-関東の女性の間で最も売上高が多い商品を表示するには、以下のようにします。
-
-```bash
-./scripts/run_analysis.sh bigquery-study-458607 analyses/view_joined_sales.sql
-```
-
-run_analysis.shに複数のSQLファイルを指定した場合、それをcatで結合してから1セッションとして実行します。よって、よく使う一時テーブルを作るようなSQL文を独立させておいて、以下のように実行することもできます。
-
-```bash
-./scripts/run_analysis.sh bigquery-study-458607 analyses/make_temp_table.sql analyze_xxx.sql
-```
-
 ## ChatGPTに分析クエリを提案させる
 
 ChatGPTの最近のバージョン（4o以降）は、BigQuery上のデータの分析を行うための実用的なSQL文を生成する能力がある。ChatGPTをうまく動作させるためには、スキーマなどのコンテキスト情報を適切に渡す必要がある。そのコンテキスト情報を自動的に集めるスクリプトを用意してある。以下を実行する。
@@ -368,6 +389,10 @@ JOINに失敗したレコードや、NULL値により売上が計算できない
 
 GCP上で実験的にクエリを書いて実行しても良いですが、実運用に組み込むものは必ずローカルに保存して実行を確認し、そのファイルをGitで管理してください。GCPとローカルで二重管理になると混乱するので、必ずローカルでGit管理されたSQLファイルを正としましょう。
 
+本番と開発とテストで全く同じSQLファイルを使うためには、プロジェクトIDを分ける必要があります。本番、開発、テストでそれぞれプロジェクトを作っておきます。テストを行う際には、テスト環境のプロジェクトを空にして、テストデータのアップロードからテストの実行までを全て自動化して行います。そのためには上述のスクリプトを組み合わせて実行するシェルスクリプトを書きます。
+
+テストが完了したなら、今度は本番環境に適用するための手順をスクリプトとしてまとめます。本番環境のプロジェクトは空にするわけにはいかないことが多いので、必要な部分だけを入れ替える手順になるでしょう。本番環境を模した状態をテスト環境で構築するスクリプトと、それに対して適用するスクリプトに分けておけば、テスト環境で本番デプロイのテストができます。
+
 ### CI/CDのその他の方法
 
 本リポジトリでは、scripts/register_scheduled_query.sh を用いたシェルベースの登録スクリプトにより、BigQueryのスケジュール付きクエリを自動デプロイしています。これは軽量で柔軟性が高く、個人開発や小規模プロジェクトに適しています。
@@ -387,6 +412,8 @@ GCP上で実験的にクエリを書いて実行しても良いですが、実�
   - 動的なクエリ生成や条件付き登録が可能で、GCP上で完結する構成
   - Cloud Functionsの保守や認証管理が必要
 - 4. 自作シェルスクリプト + REST API（本リポジトリ方式）
-  - curl によるREST API呼び出しと bq CLI を組み合わせて登録。
+  - curlによるREST API呼び出しとbq CLIを組み合わせて登録。
   - 軽量で高速。環境に依存せず動作。GitHub Actionsなどへの組込みも容易
   - エラーハンドリング・構成管理に個別にスクリプトを書く必要あり。
+
+デプロイ作業が頻繁にある場合、シェルベースの運用においてもGitHub Actionsで自動化することも視野に入ってきます。しかし、そもそも分析用クエリを足す以外のデプロイ作業が頻繁にある事が望ましくないので、運用体制を考える方が先でしょう。
