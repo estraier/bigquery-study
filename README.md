@@ -31,15 +31,14 @@
 
 ---
 
-## 環境構築（MacOS）
+## 環境構築
 
 このプロジェクトは MacOS上での動作を前提としています。以下の手順で必要な環境をセットアップしてください。
 
 ### 前提条件
 
-- MacOS（最新バージョン推奨）
 - Python 3.9以降
-- Homebrew が導入済み
+- Homebrew
 
 ### 1. Google Cloud SDKのインストールと初期化
 
@@ -47,7 +46,7 @@
 brew install --cask google-cloud-sdk
 ```
 
-インストール後に以下を実行して認証と初期設定を行ってください：
+インストール後に以下を実行して認証と初期設定を行ってください。
 
 ```bash
 gcloud init
@@ -63,7 +62,7 @@ gcloud config set project [YOUR_PROJECT_ID]
 bq version
 ```
 
-正常にバージョン情報が表示されれば完了です。
+正常にバージョン情報が表示されればOKです。執筆時点の最新版は2.1.15です。
 
 ### 3. Pythonの依存モジュールのインストール
 
@@ -72,6 +71,34 @@ pip3 install jsonschema
 ```
 
 ---
+
+## データ構造
+
+本プロジェクトでは、顧客と商品のマスターデータと、どの顧客がどの商品を買ったかというトランザクションデータを扱います。概念的には以下のような構造になります。実際にはBigQueryではPK制約やFK制約はサポートされていません。
+
+- customers
+  - customer_id INT64 (PK)
+  - customer_name STRING
+  - birtyday DATE
+  - gender STRING
+  - prefecture STRING
+  - is_premium BOOL
+- products
+  - product_id INT64 (PK)
+  - product_name STRING
+  - product_category STRING
+  - cost FLOAT64
+- sales
+  - order_id INT64 (PK)
+  - customer_id INT64 (FK)  -> customers.customer_id
+  - product_id INT64 (FK)  -> products.customer_id
+  - date_time TIMESTAMP
+  - quantity INT64
+  - revenue INT64
+  - is_proper BOOL
+  - log_source STRING
+
+実際にはsalesテーブルの多くのプロパティはJSONに入れてスキーマレスで扱っています。ログやトランザクションのデータではJSONやProtocol Buffersを使ったスキーマレスデータを扱うことが多いので、そのようなケースを模倣するためです。
 
 ## テストデータのセットアップ
 
@@ -121,11 +148,11 @@ salesテーブルには、customer_idおよびproduct_idを外部キーとする
 
 結果が1行以上であることを期待するのをポジティブテストと言います。以下のようなファイルを用意します。
 
-```
-SELECT count(*) FROM sales01.joined_sales where prefecture = "北海道"
-SELECT count(*) FROM sales01.joined_sales where prefecture = "青森県"
-SELECT count(*) FROM sales01.joined_sales where gender = "male"
-SELECT count(*) FROM sales01.joined_sales where gender = "female"
+```sql
+SELECT count(*) FROM sales01.joined_sales where prefecture = "北海道";
+SELECT count(*) FROM sales01.joined_sales where prefecture = "青森県";
+SELECT count(*) FROM sales01.joined_sales where gender = "male";
+SELECT count(*) FROM sales01.joined_sales where gender = "female";
 ```
 
 そして、以下のようにテストを実行します。
@@ -134,12 +161,12 @@ SELECT count(*) FROM sales01.joined_sales where gender = "female"
 ./scripts/litmus_test.sh bigquery-study-458607 test/litmus-joined_sales-positive.sql
 ```
 
-結果が0行であることを期待するのをネガティブテストと言い、以下のようなファイルを用意します。
+結果が0行であることを期待するのをネガティブテストと言います。以下のようなファイルを用意します。
 
-```
-SELECT count(*) FROM sales01.joined_sales where order_id IS NULL
-SELECT count(*) FROM sales01.joined_sales where customer_id IS NULL
-SELECT count(*) FROM sales01.joined_sales where product_id IS NULL
+```sql
+SELECT count(*) FROM sales01.joined_sales where order_id IS NULL;
+SELECT count(*) FROM sales01.joined_sales where customer_id IS NULL;
+SELECT count(*) FROM sales01.joined_sales where product_id IS NULL;
 ```
 
 そして、以下のようにテストを実行します。
@@ -154,7 +181,7 @@ SELECT count(*) FROM sales01.joined_sales where product_id IS NULL
 
 リトマステストは単純なクエリとそれに該当するレコードの存在確認をするのには便利ですが、複雑なクエリとそれに対応する結果の厳密な検証には使えません。ゴールデンテストでは個々のファイルにSELECT文とそれに対する期待値を書くことで、結果が期待値と厳密に一致するかどうかを調べます。まずは、以下のようなゴールデンデータを用意します。
 
-```
+```sql
 SELECT order_id, product_name, customer_name, revenue
 FROM sales01.joined_sales
 WHERE order_id IN (1, 6)
@@ -166,7 +193,7 @@ order_id,product_name,customer_name,revenue
 */
 ```
 
-このようなファイルを多数用意しておいてから、以下のコマンドを実行します。
+このようなファイルをいくつか用意しておいてから、以下のコマンドを実行します。
 
 ```shell
 ./scripts/golden_test.sh bigquery-study-458607 test/golden-*.sql
@@ -351,7 +378,6 @@ GCP上で実験的にクエリを書いて実行しても良いですが、実�
   - GCPのスケジュール付きクエリ（BigQuery Data Transfer Config）をterraform applyにより一元管理。
   - Gitで管理された明示的な宣言（HCL）ができ、他のインフラと統一したワークフローが実現できる
   - 初期セットアップに学習コストがかかり、小回りの効く動的スケジューリングには不向き
-  - 参考: google_bigquery_data_transfer_config – Terraform Registry
 - 2. dbt によるモデル構成とスケジューリング（データ変換中心）
   - SQL変換処理を models/ に定義し、定期的にdbtrunを実行。
   - クエリの依存関係、テスト、文書化が一体化
