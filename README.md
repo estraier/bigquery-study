@@ -108,7 +108,7 @@ git clone https://github.com/estraier/bigquery-study.git
   - is_proper BOOL
   - log_source STRING
 
-実際にはsalesテーブルの多くのプロパティはJSONに入れてスキーマレスで扱っています。ログやトランザクションのデータではJSONやProtocol Buffersを使ったスキーマレスデータを扱うことが多いので、そのようなケースを模倣するためです。
+salesテーブルの多くのプロパティは実際にはJSONに入れてスキーマレスで扱っています。ログやトランザクションのデータではJSONやProtocol Buffersを使ったスキーマレスデータを扱うことが多いので、そのようなユースケースを模倣するためです。
 
 ## テストデータのセットアップ
 
@@ -172,7 +172,7 @@ run_analysis.shに複数のSQLファイルを指定した場合、それをcat�
 
 一連のタスクを実行した後に、結果として生成されたテーブルに対してルールベースの妥当性検証をしておくと、データやSQLの不備を早期に発見することができます。scripts/litomus_test.shは、SQLのSELECT文を各行に書いたファイルを読み込んで、その結果が1行以上か0行かの判定をします。
 
-結果が1行以上であることを期待するのをポジティブテストと言います。以下のようなファイルを用意します。
+結果が1行以上であることを期待するのをポジティブテストと言います。以下のようなファイルを用意します。SELECT count(*)であるSQL文を各行に書きます。
 
 ```sql
 SELECT count(*) FROM sales01.joined_sales where prefecture = "北海道";
@@ -187,7 +187,7 @@ SELECT count(*) FROM sales01.joined_sales where gender = "female";
 ./scripts/litmus_test.sh bigquery-study-458607 test/litmus-joined_sales-positive.sql
 ```
 
-結果が0行であることを期待するのをネガティブテストと言います。以下のようなファイルを用意します。
+結果が0行であることを期待するのをネガティブテストと言います。以下のようなファイルを用意します。書式はポジティブの時と同様です。
 
 ```sql
 SELECT count(*) FROM sales01.joined_sales where order_id IS NULL;
@@ -205,7 +205,7 @@ SELECT count(*) FROM sales01.joined_sales where product_id IS NULL;
 
 ## ゴールデンテスト
 
-リトマステストは単純なクエリとそれに該当するレコードの存在確認をするのには便利ですが、複雑なクエリとそれに対応する結果の厳密な検証には使えません。ゴールデンテストでは個々のファイルにSELECT文とそれに対する期待値を書くことで、結果が期待値と厳密に一致するかどうかを調べます。まずは、以下のようなゴールデンデータを用意します。
+リトマステストは単純なクエリとそれに該当するレコードの存在確認をするのには便利ですが、複雑なクエリとそれに対応する結果の厳密な検証には使えません。ゴールデンテストでは個々のファイルにSELECT文とそれに対する期待値を書くことで、結果が期待値と厳密に一致するかどうかを調べます。まずは、以下のようなゴールデンデータを用意します。任意のSQL文を書き、その下のブロックコメントの中に期待する結果のCSVを書きます。
 
 ```sql
 SELECT order_id, product_name, customer_name, revenue
