@@ -119,19 +119,60 @@ salesテーブルには、customer_idおよびproduct_idを外部キーとする
 
 一連のタスクを実行した後に、結果として生成されたテーブルに対してルールベースの妥当性検証をしておくと、データやSQLの不備を早期に発見することができます。scripts/litomus_test.shは、SQLのSELECT文を各行に書いたファイルを読み込んで、その結果が1行以上か0行かの判定をします。
 
-結果が1行以上であることを期待するのをポジティブテストと言い、それは以下のように実行します。
+結果が1行以上であることを期待するのをポジティブテストと言います。以下のようなファイルを用意します。
+
+```
+SELECT count(*) FROM sales01.joined_sales where prefecture = "北海道"
+SELECT count(*) FROM sales01.joined_sales where prefecture = "青森県"
+SELECT count(*) FROM sales01.joined_sales where gender = "male"
+SELECT count(*) FROM sales01.joined_sales where gender = "female"
+```
+
+そして、以下のようにテストを実行します。
 
 ```bash
 ./scripts/litmus_test.sh bigquery-study-458607 test/litmus-joined_sales-positive.sql
 ```
 
-結果が0行であることを期待するのをネガティブテストと言い、それは以下のように実行します。
+結果が0行であることを期待するのをネガティブテストと言い、以下のようなファイルを用意します。
+
+```
+SELECT count(*) FROM sales01.joined_sales where order_id IS NULL
+SELECT count(*) FROM sales01.joined_sales where customer_id IS NULL
+SELECT count(*) FROM sales01.joined_sales where product_id IS NULL
+```
+
+そして、以下のようにテストを実行します。
 
 ```bash
 ./scripts/litmus_test.sh --negative bigquery-study-458607 test/litmus-joined_sales-negative.sql
 ```
 
 ポジティブテストには、分析結果に当然含まれると期待する条件を書いていきます。ネガティブテストには、各列にNULLなどの不正なデータが入っていないかを調べるのに便利です。各種のコーナーケースをついてポジティブテストやネガティブテストを追加していくと、システムをより堅牢にすることができます。
+
+## ゴールデンテスト
+
+リトマステストは単純なクエリとそれに該当するレコードの存在確認をするのには便利ですが、複雑なクエリとそれに対応する結果の厳密な検証には使えません。ゴールデンテストでは個々のファイルにSELECT文とそれに対する期待値を書くことで、結果が期待値と厳密に一致するかどうかを調べます。まずは、以下のようなゴールデンデータを用意します。
+
+```
+SELECT order_id, product_name, customer_name, revenue
+FROM sales01.joined_sales
+WHERE order_id IN (1, 6)
+
+/*
+order_id,product_name,customer_name,revenue
+1,けん玉,山下 翼,119720
+6,電気毛布,田中 浩,71218
+*/
+```
+
+このようなファイルを多数用意しておいてから、以下のコマンドを実行します。
+
+```shell
+./scripts/golden_test.sh bigquery-study-458607 test/golden-*.sql
+```
+
+代表的な正常系は、ゴールデンテストで網羅しておくと良いでしょう。複雑な条件のコーナーケースもゴールデンテストで検査すべきです。それ以外の細かいコーナーケースに関してはリトマステストを大量に書く方が楽です。
 
 ## スケジュール付きクエリの登録
 
