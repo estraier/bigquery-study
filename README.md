@@ -21,16 +21,18 @@ BigQueryを使った案件で上記全てを実践する必要はありません
 
 ### 手順の概要
 
-- GCP コンソールにアクセスする
-- 新しいプロジェクトを作成する
-- BigQuery API を有効化する
+- [GCPコンソール](https://console.cloud.google.com/)にアクセスする
+- BigQueryの新しいプロジェクトを作成する
+  - 画面上部のプロジェクト選択ツールを選んで、「新しいプロジェクト」を選ぶ。
+  - プロジェクト名は適当に分かりやすくつける。組織は「組織なし」でOK。
+- BigQuery APIを有効化する
+  - 画面左上の三本線メニューから「APIとサービス」を選ぶ。
+  - 画面上部の検索窓で「BigQuery API」を検索して選択、有効化。
 - プロジェクトIDをメモしておく
-   - GCPコンソールのナビゲーションバー左上にあるプロジェクト名の右側に表示されています
-   - 例：`your-project-id-123456` のような英数字のID
+  - GCPコンソールのナビゲーションバー左上にあるプロジェクト名の右側に表示されています
+  - 例：`your-project-id-123456` のような英数字のID
 
-詳細な手順は以下のGoogle Cloudドキュメントをご覧ください：
-
-[プロジェクトの作成と管理|GCPドキュメント](https://cloud.google.com/resource-manager/docs/creating-managing-projects?hl=ja)
+詳細な手順は[Google Cloud](https://cloud.google.com/resource-manager/docs/creating-managing-projects?hl=ja)ドキュメントをご覧ください。
 
 ---
 
