@@ -271,6 +271,25 @@ GCPコンソールで、スケジュールされたクエリとしてcreate_tabl
 
 2分後にクエリが実行されると、latest_week_joined_salesというテーブルが生成されているはずです。また、_result_create_table_latest_week_joined_salesも生成されますが、それには特に何も格納されません。
 
+## ダッシュボード
+
+日々更新されるデータの概要を表やグラフで閲覧できるようにするには、各種のダッシュボード機能を使うと便利です。BigQueryと連携する場合、[Looker Studio](https://lookerstudio.google.com/)を使うのが便利です。
+
+どの表示サービスと連携するにせよ、ダッシュボードに表示するためのデータをテーブルとして作成しておく必要があります。また、そのテーブルの内容は定期的に更新されるべきです。そのため、スケジュール付きクエリの結果のテーブルを使うのが便利です。
+
+analyses/category_sales_by_date.sqlは、製品カテゴリ別の売上げ総額を日毎に集計するクエリです。これをスケジュール付きクエリとして登録しましょう。
+
+```bash
+./scripts/register_scheduled_query.sh bigquery-study-458607 \
+  category_sales_by_date \
+  analyses/category_sales_by_date.sql \
+  --run-soon
+```
+
+該当のスケジュール付きクエリが実行がされると、_result_category_sales_by_dateというテーブルが生成されているはずです。
+
+次に、Looker Studioのページに言って、「空のレポート」「Big Query」と進んで、「データレポートの追加」のところで、「bigquery-study（あなたのプロジェクト名）」「sales01」「_result_category_sales_by_date」を選んで「追加」ボタンを押します。レポート画面になったら「グラフを追加」「折れ線グラフ」を選択して画面に貼り付けます。そのグラフを選択して、「ディメンション」に「sales_date」を、「内訳ディメンション」に「product_category」を、「指標」に「total_revenue」を設定します。その後、「共有」機能で適宜共有すれば良い。
+
 ## JSONのペイロードとJSONスキーマ
 
 salesテーブルには、取引情報がJSON形式のペイロードとして格納されています。パーティショニングと絞り込みのための属性も抽出してあります。
