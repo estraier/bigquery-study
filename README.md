@@ -13,8 +13,6 @@
 
 BigQueryを使った案件で上記全てを実践する必要はありませんが、一部でも適宜取り入れることで生産性が上がるかもしれません。自動化のためのほとんどの機能は単純なシェルスクリプトなので、案件の内容に応じて適当にカスタマイズして使うのに都合が良いでしょう。
 
----
-
 ## GCPプロジェクトとBigQuery環境の準備
 
 このプロジェクトを動作させるには、GCP上にBigQueryを有効にしたプロジェクトが必要です。
@@ -33,8 +31,6 @@ BigQueryを使った案件で上記全てを実践する必要はありません
   - 例：`your-project-id-123456` のような英数字のID
 
 詳細な手順は[Google Cloud](https://cloud.google.com/resource-manager/docs/creating-managing-projects?hl=ja)ドキュメントをご覧ください。
-
----
 
 ## 環境構築
 
