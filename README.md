@@ -21,10 +21,10 @@ BigQueryを使った案件で上記全てを実践する必要はありません
 
 ### 手順の概要
 
-1. GCP コンソールにアクセスする
-2. 新しいプロジェクトを作成する
-3. BigQuery API を有効化する
-4. プロジェクトIDをメモしておく
+- GCP コンソールにアクセスする
+- 新しいプロジェクトを作成する
+- BigQuery API を有効化する
+- プロジェクトIDをメモしておく
    - GCPコンソールのナビゲーションバー左上にあるプロジェクト名の右側に表示されています
    - 例：`your-project-id-123456` のような英数字のID
 
@@ -425,19 +425,19 @@ GCP上で実験的にクエリを書いて実行しても良いですが、実�
 
 一方で、組織開発やチーム連携を見据える場合、より構造化された手段を用いることで運用性・保守性が向上します。以下に代表的なCI/CD構成の選択肢をまとめます。
 
-- 1. Terraform による構成管理（Infrastructure as Code）
+- Terraform による構成管理（Infrastructure as Code）
   - GCPのスケジュール付きクエリ（BigQuery Data Transfer Config）をterraform applyにより一元管理。
   - Gitで管理された明示的な宣言（HCL）ができ、他のインフラと統一したワークフローが実現できる
   - 初期セットアップに学習コストがかかり、小回りの効く動的スケジューリングには不向き
-- 2. dbt によるモデル構成とスケジューリング（データ変換中心）
+- dbt によるモデル構成とスケジューリング（データ変換中心）
   - SQL変換処理を models/ に定義し、定期的にdbtrunを実行。
   - クエリの依存関係、テスト、文書化が一体化
   - スケジュール付きクエリそのもののデプロイ管理ではなく、個別の運用環境が必要
-- 3. Cloud Scheduler + Cloud Functions による動的登録
+- Cloud Scheduler + Cloud Functions による動的登録
   - スケジューラがCloud Functionを起動し、BigQuery Transfer ConfigをREST APIで作成・更新。
   - 動的なクエリ生成や条件付き登録が可能で、GCP上で完結する構成
   - Cloud Functionsの保守や認証管理が必要
-- 4. 自作シェルスクリプト + REST API（本リポジトリ方式）
+- 自作シェルスクリプト + REST API（本リポジトリ方式）
   - curlによるREST API呼び出しとbq CLIを組み合わせて登録。
   - 軽量で高速。環境に依存せず動作。GitHub Actionsなどへの組込みも容易
   - エラーハンドリング・構成管理に個別にスクリプトを書く必要あり。
