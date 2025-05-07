@@ -289,7 +289,7 @@ analyses/category_sales_by_date.sqlは、製品カテゴリ別の売上げ総額
 
 該当のスケジュール付きクエリが実行がされると、_result_category_sales_by_dateというテーブルが生成されているはずです。
 
-次に、Looker Studioのページに言って、「空のレポート」「Big Query」と進んで、「データレポートの追加」のところで、「bigquery-study（あなたのプロジェクト名）」「sales01」「_result_category_sales_by_date」を選んで「追加」ボタンを押します。レポート画面になったら「グラフを追加」「折れ線グラフ」を選択して画面に貼り付けます。そのグラフを選択して、「ディメンション」に「sales_date」を、「内訳ディメンション」に「product_category」を、「指標」に「total_revenue」を設定します。その後、「共有」機能で適宜共有すれば良い。
+次に、Looker Studioのページに言って、「空のレポート」「Big Query」と進んで、「データレポートの追加」のところで、「bigquery-study（あなたのプロジェクト名）」「sales01」「_result_category_sales_by_date」を選んで「追加」ボタンを押します。レポート画面になったら「グラフを追加」「折れ線グラフ」を選択して画面に貼り付けます。そのグラフを選択して、「ディメンション」に「sales_date」を、「内訳ディメンション」に「product_category」を、「指標」に「total_revenue」を設定します。その後、「共有」機能で適宜共有すれば良いでしょう。
 
 ## JSONのペイロードとJSONスキーマ
 
