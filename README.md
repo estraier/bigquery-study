@@ -143,7 +143,8 @@ salesテーブルには、customer_idおよびproduct_idを外部キーとする
 run_analysis.shに複数のSQLファイルを指定した場合、それをcatで結合してから1セッションとして実行します。よって、よく使う一時テーブルを作るようなSQL文を独立させておいて、以下のように実行することもできます。
 
 ```bash
-./scripts/run_analysis.sh bigquery-study-458607 analyses/make_temp_table.sql analyze_xxx.sql
+./scripts/run_analysis.sh bigquery-study-458607 \
+  analyses/make_temp_table.sql analyses/analyze_xxx.sql
 ```
 
 ## リグレッションテスト
