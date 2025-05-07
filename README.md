@@ -143,7 +143,7 @@ salesテーブルには、customer_idおよびproduct_idを外部キーとする
 関東の女性の間で最も売上高が多い商品を表示するには、以下のようにします。
 
 ```bash
-./scripts/run_analysis.sh bigquery-study-458607 analyses/view_joined_sales.sql
+./scripts/run_analysis.sh bigquery-study-458607 analyses/top_products_kanto_female.sql
 ```
 
 run_analysis.shに複数のSQLファイルを指定した場合、それをcatで結合してから1セッションとして実行します。よって、よく使う一時テーブルを作るようなSQL文を独立させておいて、以下のように実行することもできます。
