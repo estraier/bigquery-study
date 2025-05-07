@@ -428,10 +428,8 @@ JOINに失敗したレコードや、NULL値により売上が計算できない
 BigQueryはタイムトラベル機能があり、テーブルの過去の内容を最大1週間前まで遡って取得できる。これをバックアップの代わりに使うこともできる。
 
 ```sql
-CREATE OR REPLACE TABLE `bigquery-study-458607.sales01.customers`
-AS
-SELECT *
-FROM `bigquery-study-458607.sales01.customers`
+CREATE OR REPLACE TABLE sales01.customers
+AS SELECT * FROM sales01.customers
 FOR SYSTEM_TIME AS OF TIMESTAMP("2025-05-07 08:00:00");
 ```
 
