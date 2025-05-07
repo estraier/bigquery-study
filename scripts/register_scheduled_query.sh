@@ -7,6 +7,7 @@ DUMMY_SCHEDULE=""
 
 RUN_SOON=""
 DELETE_ONLY=""
+DELETE_ALL=""
 ARGS=()
 TEMP_FILES=()
 
@@ -25,18 +26,39 @@ for arg in "$@"; do
     --delete)
       DELETE_ONLY=1
       ;;
+    --delete-all)
+      DELETE_ALL=1
+      ;;
     *)
       ARGS+=("$arg")
       ;;
   esac
 done
 
-if [ ${#ARGS[@]} -lt 2 ]; then
-  echo "Usage: $0 [--run-soon] [--delete] PROJECT_ID DISPLAY_NAME [SQL_FILE...]"
+if [ ${#ARGS[@]} -lt 1 ]; then
+  echo "Usage: $0 [--run-soon] [--delete] [--delete-all] PROJECT_ID [DISPLAY_NAME SQL_FILE...]"
   exit 1
 fi
 
 PROJECT_ID="${ARGS[0]}"
+
+if [[ -n "$DELETE_ALL" ]]; then
+  echo "Deleting all scheduled queries in project ${PROJECT_ID} (location: ${LOCATION})..."
+  ALL_CONFIGS=$(bq ls --project_id="$PROJECT_ID" --transfer_config --transfer_location="$LOCATION" --format=prettyjson | jq -r '.[].name')
+  if [ -z "$ALL_CONFIGS" ]; then
+    echo "No scheduled queries found."
+  else
+    echo "$ALL_CONFIGS" | xargs -r -n1 bq rm -f --project_id="$PROJECT_ID" --transfer_config
+    echo "All scheduled queries deleted."
+  fi
+  exit 0
+fi
+
+if [ ${#ARGS[@]} -lt 2 ]; then
+  echo "Usage: $0 [--run-soon] [--delete] [--delete-all] PROJECT_ID DISPLAY_NAME [SQL_FILE...]"
+  exit 1
+fi
+
 DATASET_ID="sales01"
 DISPLAY_NAME="${ARGS[1]}"
 SQL_FILES=("${ARGS[@]:2}")
