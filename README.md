@@ -165,7 +165,7 @@ run_analysis.shに複数のSQLファイルを指定した場合、それをcat�
 ./scripts/regression_test.sh bigquery-study-458607 --dump
 ```
 
-`test/expected/` ディレクトリに、BigQuery 上のデータをダンプしたCSVファイルが保存されます。テーブルごとに `ORDER BY` が安定するカラムを指定しているため、差分があっても比較可能です。
+`test/expected/` ディレクトリに、BigQuery 上のデータをダンプしたCSVファイルが保存されます。各テーブルの全てのレコードがCSV形式で出力されます。レコードは全ての値のMD5でソートされるため、実行毎に結果が変わることはありません。
 
 期待値との差分がないかをチェックするには、以下のコマンドを実行します。
 

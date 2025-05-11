@@ -18,12 +18,12 @@ echo "Project: $PROJECT_ID"
 echo "Dataset: $DATASET_ID"
 echo "Mode: $([[ $DUMP_MODE -eq 1 ]] && echo Dump || echo Compare)"
 
-# Table configuration
-TABLE_CONFIGS=$(cat <<EOF
-customers,customer_id
-products,product_id
-sales,order_id
-joined_sales,order_id
+# Table list only
+TABLES=$(cat <<EOF
+customers
+products
+sales
+joined_sales
 EOF
 )
 
@@ -34,13 +34,13 @@ mkdir -p test/diff
 STATUS=0
 RESULTS=()
 
-while IFS=',' read -r TABLE ORDER_BY; do
+while read -r TABLE; do
   EXPECTED_FILE="test/expected/${TABLE}.csv"
   CURRENT_FILE="test/tmp/${TABLE}.csv"
   DIFF_FILE="test/diff/${TABLE}.diff"
 
   echo ""
-  echo "Processing $TABLE (ORDER BY $ORDER_BY)..."
+  echo "Processing $TABLE..."
 
   bq query \
     --project_id="$PROJECT_ID" \
@@ -48,7 +48,7 @@ while IFS=',' read -r TABLE ORDER_BY; do
     --use_legacy_sql=false \
     --format=csv \
     --quiet \
-    "SELECT * FROM \`${PROJECT_ID}.${DATASET_ID}.${TABLE}\` ORDER BY ${ORDER_BY}" > "$CURRENT_FILE"
+    "SELECT * FROM \`${PROJECT_ID}.${DATASET_ID}.${TABLE}\` AS t ORDER BY MD5(TO_JSON_STRING(t))" > "$CURRENT_FILE"
 
   if [[ $DUMP_MODE -eq 1 ]]; then
     cp "$CURRENT_FILE" "$EXPECTED_FILE"
@@ -65,7 +65,7 @@ while IFS=',' read -r TABLE ORDER_BY; do
       RESULTS+=("$TABLE: ERROR")
     fi
   fi
-done <<< "$TABLE_CONFIGS"
+done <<< "$TABLES"
 
 echo ""
 echo "===== Regression Test Result ====="
